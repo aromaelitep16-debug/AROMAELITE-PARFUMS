@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aroma Élite · Administración</title>
+
+<!-- ============ CONFIGURA AQUÍ ============ -->
+<script>
+  const SUPABASE_URL  = "https://bhatreoyfwyszmsmtuuz.supabase.co";   // ← igual que en index.html
+  const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoYXRyZW95Znd5c3ptc210dXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMjQzNjYsImV4cCI6MjEwMTkwMDM2Nn0.CR-Z95iqein16qsfqjCdtfaUUm-f3Qdgi2Jumf-wY7M";                        // ← igual que en index.html
+  const PIN_ADMIN     = "1999";                               // ← cámbialo por tu PIN secreto
+</script>
+<!-- ======================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --negro:#0b0b0c;--negro-2:#121214;--negro-3:#1a1a1d;--blanco:#f6f4f0;
+  --gris:#9a968e;--gris-2:#6c6963;--oro:#c6a664;--oro-claro:#e6d4a6;
+  --linea:rgba(246,244,240,.1);--rojo:#e0655a;--verde:#5fbf8a;
+  --display:'Cormorant Garamond',serif;--sans:'Jost',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--negro);color:var(--blanco);font-family:var(--sans);font-weight:300}
+a{color:var(--oro)}
+input,select,textarea,button{font-family:var(--sans)}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:1000;background:var(--negro);display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{background:var(--negro-2);border:1px solid var(--linea);border-radius:20px;padding:44px 38px;max-width:380px;width:100%;text-align:center}
+.login-card img{height:70px;margin:0 auto 8px;mix-blend-mode:screen}
+.login-card .sub{color:var(--gris);font-size:.82rem;letter-spacing:.24em;text-transform:uppercase;margin-bottom:28px}
+.login-card input{width:100%;background:var(--negro);border:1px solid var(--linea);color:var(--blanco);
+  padding:15px;border-radius:12px;text-align:center;font-size:1.6rem;letter-spacing:.5em;outline:none;transition:.3s}
+.login-card input:focus{border-color:var(--oro)}
+.login-card button{width:100%;margin-top:16px;background:var(--oro);color:#000;border:none;padding:15px;
+  border-radius:40px;font-weight:500;letter-spacing:.08em;cursor:pointer;transition:.3s}
+.login-card button:hover{background:var(--oro-claro)}
+.login-err{color:var(--rojo);font-size:.85rem;margin-top:14px;min-height:20px}
+
+/* APP */
+#app{display:none;max-width:1200px;margin:0 auto;padding:24px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 0 22px;border-bottom:1px solid var(--linea);margin-bottom:26px;flex-wrap:wrap;gap:14px}
+.topbar img{height:48px;mix-blend-mode:screen}
+.topbar .actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--linea);background:transparent;color:var(--blanco);padding:11px 20px;
+  border-radius:40px;cursor:pointer;font-size:.86rem;letter-spacing:.04em;transition:.25s;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--oro);color:var(--oro)}
+.btn-oro{background:var(--oro);color:#000;border-color:var(--oro)}
+.btn-oro:hover{background:var(--oro-claro);color:#000}
+.btn-sm{padding:8px 14px;font-size:.8rem}
+.btn-rojo:hover{border-color:var(--rojo);color:var(--rojo)}
+
+.tabs{display:flex;gap:8px;margin-bottom:24px}
+.tab{background:transparent;border:1px solid var(--linea);color:var(--gris);padding:10px 22px;border-radius:40px;cursor:pointer;transition:.25s}
+.tab.activo{background:var(--blanco);color:#000;border-color:var(--blanco)}
+
+.toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{background:var(--negro-2);border:1px solid var(--linea);color:var(--blanco);padding:11px 15px;border-radius:10px;outline:none}
+.toolbar input{flex:1;min-width:200px}
+
+/* LISTA */
+.lista{display:flex;flex-direction:column;gap:12px}
+.item{display:flex;align-items:center;gap:16px;background:var(--negro-2);border:1px solid var(--linea);border-radius:14px;padding:12px 16px}
+.item-img{width:60px;height:60px;border-radius:10px;object-fit:cover;background:var(--negro-3);flex-shrink:0}
+.item-ph{width:60px;height:60px;border-radius:10px;background:var(--negro-3);display:flex;align-items:center;justify-content:center;color:var(--gris-2);font-family:var(--display);font-size:1.4rem;flex-shrink:0}
+.item-info{flex:1;min-width:0}
+.item-nombre{font-family:var(--display);font-size:1.3rem;font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.item-meta{color:var(--gris);font-size:.8rem;margin-top:3px}
+.item-precio{text-align:right;font-family:var(--display);font-size:1.3rem;white-space:nowrap}
+.item-precio .old{display:block;font-size:.78rem;color:var(--gris-2);text-decoration:line-through;font-family:var(--sans)}
+.item-acc{display:flex;gap:8px;flex-shrink:0}
+.pill{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--linea);color:var(--gris)}
+.pill.oro{background:var(--oro);color:#000;border-color:var(--oro)}
+.pill.off{color:var(--gris-2)}
+
+/* MODAL EDIT */
+.overlay{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto}
+.overlay.open{display:flex}
+.editor{background:var(--negro-2);border:1px solid var(--linea);border-radius:18px;max-width:760px;width:100%;margin:auto;padding:30px}
+.editor h2{font-family:var(--display);font-size:1.9rem;font-weight:500;margin-bottom:22px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo.full{grid-column:1/-1}
+.campo label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gris)}
+.campo input,.campo select,.campo textarea{background:var(--negro);border:1px solid var(--linea);color:var(--blanco);padding:12px 14px;border-radius:10px;outline:none;transition:.25s;font-size:.95rem}
+.campo input:focus,.campo select:focus,.campo textarea:focus{border-color:var(--oro)}
+.campo textarea{resize:vertical;min-height:80px;font-family:var(--sans)}
+.checkbox{display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--blanco);font-size:.95rem}
+.checkbox input{width:20px;height:20px;accent-color:var(--oro)}
+
+/* Imágenes */
+.imgs-zone{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.img-item{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--linea)}
+.img-item img{width:100%;height:100%;object-fit:cover}
+.img-item button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:.85rem;line-height:1}
+.img-add{width:84px;height:84px;border:1px dashed var(--linea);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--gris);font-size:.7rem;transition:.25s}
+.img-add:hover{border-color:var(--oro);color:var(--oro)}
+.img-add svg{width:20px;height:20px}
+
+/* Notas */
+.nivel-block{background:var(--negro);border:1px solid var(--linea);border-radius:12px;padding:14px;margin-bottom:12px}
+.nivel-block .nh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.nivel-block .nh b{font-family:var(--display);font-size:1.15rem;font-weight:500;color:var(--oro-claro)}
+.nota-chip{display:flex;align-items:center;gap:8px;background:var(--negro-2);border:1px solid var(--linea);border-radius:30px;padding:5px 6px 5px 5px;margin:4px 6px 4px 0}
+.nota-chip img,.nota-chip .ini{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--negro-3);display:flex;align-items:center;justify-content:center;font-family:var(--display);color:var(--oro);font-size:.9rem}
+.nota-chip span{font-size:.85rem}
+.nota-chip .rm{background:none;border:none;color:var(--gris-2);cursor:pointer;font-size:1rem;padding:0 4px}
+.nota-chip .up{background:none;border:none;color:var(--gris-2);cursor:pointer;font-size:.85rem}
+.nivel-add{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.nivel-add input{flex:1;min-width:120px;background:var(--negro-2);border:1px solid var(--linea);color:var(--blanco);padding:9px 12px;border-radius:8px;outline:none;font-size:.88rem}
+.notas-wrap{margin-top:6px}
+
+.editor-foot{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;flex-wrap:wrap}
+.hint{color:var(--gris-2);font-size:.78rem;margin-top:4px}
+.uploading{opacity:.6;pointer-events:none}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--negro-3);border:1px solid var(--oro);color:var(--blanco);padding:14px 26px;border-radius:40px;z-index:900;transition:.4s;opacity:0}
+.toast.show{transform:translateX(-50%);opacity:1}
+.empty{text-align:center;padding:60px;color:var(--gris)}
+.empty .d{font-family:var(--display);font-size:1.8rem;margin-bottom:8px}
+
+@media(max-width:640px){.form-grid{grid-template-columns:1fr}.item-precio{display:none}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <img src="assets/logo-negro.png" alt="Aroma Élite" />
+    <div class="sub">Panel de administración</div>
+    <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off" />
+    <button onclick="entrar()">Ingresar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <img src="assets/logo-negro.png" alt="Aroma Élite" />
+    <div class="actions">
+      <a class="btn btn-sm" href="index.html" target="_blank">Ver catálogo ↗</a>
+      <button class="btn btn-sm btn-rojo" onclick="salir()">Salir</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab activo" data-tab="perfumes" onclick="cambiarTab('perfumes')">Perfumes</button>
+    <button class="tab" data-tab="config" onclick="cambiarTab('config')">Tienda y redes</button>
+  </div>
+
+  <!-- TAB PERFUMES -->
+  <div id="tab-perfumes">
+    <div class="toolbar">
+      <input id="buscar" placeholder="Buscar perfume…" oninput="renderLista()" />
+      <select id="fTipoAdmin" onchange="renderLista()">
+        <option value="">Toda categoría</option>
+        <option value="arabe">Árabes</option>
+        <option value="diseñador">Diseñador</option>
+        <option value="nicho">Nicho</option>
+      </select>
+      <button class="btn btn-oro" onclick="nuevo()">+ Nuevo perfume</button>
+    </div>
+    <div class="lista" id="lista"></div>
+  </div>
+
+  <!-- TAB CONFIG -->
+  <div id="tab-config" style="display:none">
+    <div class="editor" style="max-width:620px;margin:0 auto">
+      <h2>Datos de la tienda</h2>
+      <div class="form-grid">
+        <div class="campo full">
+          <label>WhatsApp (solo números)</label>
+          <input id="cWhatsapp" placeholder="978345068" />
+          <div class="hint">Se antepone 51 (Perú) automáticamente si no lo pones.</div>
+        </div>
+        <div class="campo full">
+          <label>Mensaje inicial de WhatsApp</label>
+          <input id="cMensaje" placeholder="Hola Aroma Élite, me interesa…" />
+        </div>
+        <div class="campo full"><label>Instagram (URL)</label><input id="cInstagram" /></div>
+        <div class="campo full"><label>TikTok (URL)</label><input id="cTiktok" /></div>
+        <div class="campo full"><label>Facebook (URL · opcional)</label><input id="cFacebook" /></div>
+      </div>
+      <div class="editor-foot">
+        <button class="btn btn-oro" onclick="guardarConfig()">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR PERFUME -->
+<div class="overlay" id="overlay">
+  <div class="editor" id="editor">
+    <h2 id="editorTit">Nuevo perfume</h2>
+    <div class="form-grid">
+      <div class="campo"><label>Nombre *</label><input id="eNombre" /></div>
+      <div class="campo"><label>Marca</label><input id="eMarca" /></div>
+      <div class="campo">
+        <label>Categoría</label>
+        <select id="eTipo">
+          <option value="arabe">Árabe</option>
+          <option value="diseñador" selected>Diseñador</option>
+          <option value="nicho">Nicho</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Género</label>
+        <select id="eGenero">
+          <option value="hombre">Hombre</option>
+          <option value="mujer">Mujer</option>
+          <option value="unisex" selected>Unisex</option>
+        </select>
+      </div>
+      <div class="campo"><label>Precio (S/) *</label><input id="ePrecio" type="number" step="0.01" /></div>
+      <div class="campo"><label>Precio oferta (S/ · opcional)</label><input id="ePrecioOferta" type="number" step="0.01" /></div>
+      <div class="campo"><label>Duración</label><input id="eDuracion" placeholder="8-10 horas" /></div>
+      <div class="campo"><label>Hora de uso</label><input id="eHoraUso" placeholder="Día / Noche" /></div>
+      <div class="campo full"><label>Descripción</label><textarea id="eDescripcion"></textarea></div>
+
+      <div class="campo full">
+        <label>Imágenes del perfume</label>
+        <div class="imgs-zone" id="imgsZone"></div>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden />
+        <div class="hint">Sube fotos (se guardan en Supabase) o la primera imagen será la portada.</div>
+      </div>
+
+      <div class="campo full">
+        <label>Pirámide olfativa (notas aromáticas)</label>
+        <div class="notas-wrap" id="notasWrap"></div>
+        <div class="hint">La imagen de la nota es opcional (se muestra un círculo con la inicial si no la pones).</div>
+      </div>
+
+      <div class="campo">
+        <label class="checkbox"><input type="checkbox" id="eDestacado" /> Destacado (aparece primero)</label>
+      </div>
+      <div class="campo">
+        <label class="checkbox"><input type="checkbox" id="eActivo" checked /> Visible en el catálogo</label>
+      </div>
+    </div>
+    <div class="editor-foot">
+      <button class="btn" onclick="cerrarEditor()">Cancelar</button>
+      <button class="btn btn-oro" id="btnGuardar" onclick="guardarPerfume()">Guardar perfume</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let PERFUMES=[], CONFIG={}, editId=null, imgs=[], notas={salida:[],corazon:[],fondo:[]};
+
+/* ---------- LOGIN ---------- */
+function entrar(){
+  const v=document.getElementById('pin').value;
+  if(v===PIN_ADMIN){
+    sessionStorage.setItem('ae_admin','1');
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    cargar();
+  }else{
+    document.getElementById('loginErr').textContent='PIN incorrecto.';
+    document.getElementById('pin').value='';
+  }
+}
+function salir(){sessionStorage.removeItem('ae_admin');location.reload();}
+document.getElementById('pin').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
+if(sessionStorage.getItem('ae_admin')==='1'){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  cargar();
+}
+
+/* ---------- CARGA ---------- */
+async function cargar(){
+  const {data:c}=await sb.from('config').select('*').eq('id',1).single();
+  CONFIG=c||{}; llenarConfig();
+  const {data:p}=await sb.from('perfumes').select('*').order('destacado',{ascending:false}).order('orden').order('created_at',{ascending:false});
+  PERFUMES=p||[]; renderLista();
+}
+function llenarConfig(){
+  cWhatsapp.value=CONFIG.whatsapp||''; cMensaje.value=CONFIG.mensaje_wsp||'';
+  cInstagram.value=CONFIG.instagram||''; cTiktok.value=CONFIG.tiktok||''; cFacebook.value=CONFIG.facebook||'';
+}
+async function guardarConfig(){
+  const payload={whatsapp:cWhatsapp.value.trim(),mensaje_wsp:cMensaje.value.trim(),
+    instagram:cInstagram.value.trim(),tiktok:cTiktok.value.trim(),facebook:cFacebook.value.trim()};
+  const {error}=await sb.from('config').update(payload).eq('id',1);
+  toast(error?'Error al guardar':'Datos de la tienda guardados ✓');
+  if(!error) CONFIG={...CONFIG,...payload};
+}
+
+/* ---------- TABS ---------- */
+function cambiarTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('activo',x.dataset.tab===t));
+  document.getElementById('tab-perfumes').style.display=t==='perfumes'?'block':'none';
+  document.getElementById('tab-config').style.display=t==='config'?'block':'none';
+}
+
+/* ---------- LISTA ---------- */
+const tipoLabel={arabe:'Árabe','diseñador':'Diseñador',nicho:'Nicho'};
+const money=n=>'S/ '+Number(n||0).toFixed(2);
+function renderLista(){
+  const q=(buscar.value||'').toLowerCase(), ft=fTipoAdmin.value;
+  const list=PERFUMES.filter(p=>{
+    if(ft && p.tipo!==ft) return false;
+    if(q && !((p.nombre||'').toLowerCase().includes(q)||(p.marca||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const el=document.getElementById('lista');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="d">Sin perfumes</div><p>Crea tu primer perfume con “+ Nuevo perfume”.</p></div>';return;}
+  el.innerHTML=list.map(p=>{
+    const img=(Array.isArray(p.imagenes)&&p.imagenes[0])||'';
+    return `<div class="item">
+      ${img?`<img class="item-img" src="${img}">`:`<div class="item-ph">Æ</div>`}
+      <div class="item-info">
+        <div class="item-nombre">${p.nombre}
+          ${p.destacado?'<span class="pill oro">Destacado</span>':''}
+          ${!p.activo?'<span class="pill off">Oculto</span>':''}
+        </div>
+        <div class="item-meta">${p.marca||'—'} · ${tipoLabel[p.tipo]||p.tipo} · ${(p.genero||'').charAt(0).toUpperCase()+(p.genero||'').slice(1)}</div>
+      </div>
+      <div class="item-precio">${money(p.precio_oferta||p.precio)}
+        ${p.precio_oferta?`<span class="old">${money(p.precio)}</span>`:''}
+      </div>
+      <div class="item-acc">
+        <button class="btn btn-sm" onclick="editar('${p.id}')">Editar</button>
+        <button class="btn btn-sm btn-rojo" onclick="eliminar('${p.id}')">Borrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- EDITOR ---------- */
+function nuevo(){
+  editId=null; imgs=[]; notas={salida:[],corazon:[],fondo:[]};
+  editorTit.textContent='Nuevo perfume';
+  eNombre.value='';eMarca.value='';eTipo.value='diseñador';eGenero.value='unisex';
+  ePrecio.value='';ePrecioOferta.value='';eDuracion.value='';eHoraUso.value='';eDescripcion.value='';
+  eDestacado.checked=false;eActivo.checked=true;
+  pintarImgs(); pintarNotas();
+  abrirEditor();
+}
+function editar(id){
+  const p=PERFUMES.find(x=>x.id===id); if(!p)return;
+  editId=id;
+  imgs=Array.isArray(p.imagenes)?[...p.imagenes]:[];
+  notas={salida:[],corazon:[],fondo:[],...(p.notas||{})};
+  notas.salida=notas.salida||[];notas.corazon=notas.corazon||[];notas.fondo=notas.fondo||[];
+  editorTit.textContent='Editar perfume';
+  eNombre.value=p.nombre||'';eMarca.value=p.marca||'';eTipo.value=p.tipo||'diseñador';eGenero.value=p.genero||'unisex';
+  ePrecio.value=p.precio||'';ePrecioOferta.value=p.precio_oferta||'';
+  eDuracion.value=p.duracion||'';eHoraUso.value=p.hora_uso||'';eDescripcion.value=p.descripcion||'';
+  eDestacado.checked=!!p.destacado;eActivo.checked=p.activo!==false;
+  pintarImgs(); pintarNotas();
+  abrirEditor();
+}
+function abrirEditor(){document.getElementById('overlay').classList.add('open');document.body.style.overflow='hidden';}
+function cerrarEditor(){document.getElementById('overlay').classList.remove('open');document.body.style.overflow='';}
+
+/* Imágenes */
+function pintarImgs(){
+  document.getElementById('imgsZone').innerHTML =
+    imgs.map((u,i)=>`<div class="img-item"><img src="${u}"><button onclick="quitarImg(${i})">✕</button></div>`).join('')+
+    `<div class="img-add" onclick="document.getElementById('fileInput').click()">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg>Subir</div>`;
+}
+function quitarImg(i){imgs.splice(i,1);pintarImgs();}
+document.getElementById('fileInput').addEventListener('change',async e=>{
+  const files=[...e.target.files]; if(!files.length)return;
+  const zone=document.getElementById('imgsZone'); zone.classList.add('uploading');
+  for(const f of files){
+    const ext=(f.name.split('.').pop()||'jpg').toLowerCase();
+    const path=`perfumes/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const {error}=await sb.storage.from('imagenes').upload(path,f,{cacheControl:'3600',upsert:false});
+    if(error){toast('Error al subir imagen');continue;}
+    const {data}=sb.storage.from('imagenes').getPublicUrl(path);
+    imgs.push(data.publicUrl);
+  }
+  zone.classList.remove('uploading'); pintarImgs(); e.target.value='';
+});
+
+/* Notas */
+const NIVELES=[['salida','Notas de salida'],['corazon','Notas de corazón'],['fondo','Notas de fondo']];
+function pintarNotas(){
+  document.getElementById('notasWrap').innerHTML=NIVELES.map(([k,label])=>{
+    const chips=(notas[k]||[]).map((n,i)=>{
+      const ini=(n.nombre||'?').charAt(0).toUpperCase();
+      const av=n.imagen?`<img src="${n.imagen}">`:`<span class="ini">${ini}</span>`;
+      return `<span class="nota-chip">${av}<span>${n.nombre}</span>
+        <button class="up" title="Imagen" onclick="imgNota('${k}',${i})">📷</button>
+        <button class="rm" onclick="quitarNota('${k}',${i})">✕</button></span>`;
+    }).join('');
+    return `<div class="nivel-block">
+      <div class="nh"><b>${label}</b></div>
+      <div>${chips||'<span style="color:var(--gris-2);font-size:.85rem">Sin notas aún</span>'}</div>
+      <div class="nivel-add">
+        <input id="add-${k}" placeholder="Ej: Bergamota" onkeydown="if(event.key==='Enter'){agregarNota('${k}');event.preventDefault();}">
+        <button class="btn btn-sm" onclick="agregarNota('${k}')">Añadir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function agregarNota(k){
+  const inp=document.getElementById('add-'+k); const v=(inp.value||'').trim(); if(!v)return;
+  notas[k].push({nombre:v,imagen:''}); inp.value=''; pintarNotas();
+  setTimeout(()=>{const el=document.getElementById('add-'+k);if(el)el.focus();},30);
+}
+function quitarNota(k,i){notas[k].splice(i,1);pintarNotas();}
+async function imgNota(k,i){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=async()=>{
+    const f=inp.files[0]; if(!f)return;
+    toast('Subiendo imagen de nota…');
+    const ext=(f.name.split('.').pop()||'jpg').toLowerCase();
+    const path=`notas/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const {error}=await sb.storage.from('imagenes').upload(path,f);
+    if(error){toast('Error al subir');return;}
+    const {data}=sb.storage.from('imagenes').getPublicUrl(path);
+    notas[k][i].imagen=data.publicUrl; pintarNotas();
+  };
+  inp.click();
+}
+
+/* Guardar / eliminar */
+async function guardarPerfume(){
+  const nombre=eNombre.value.trim();
+  if(!nombre){toast('El nombre es obligatorio');return;}
+  if(!ePrecio.value){toast('El precio es obligatorio');return;}
+  const btn=document.getElementById('btnGuardar'); btn.classList.add('uploading'); btn.textContent='Guardando…';
+  const payload={
+    nombre, marca:eMarca.value.trim(), tipo:eTipo.value, genero:eGenero.value,
+    descripcion:eDescripcion.value.trim(), duracion:eDuracion.value.trim(), hora_uso:eHoraUso.value.trim(),
+    precio:parseFloat(ePrecio.value)||0,
+    precio_oferta:ePrecioOferta.value?parseFloat(ePrecioOferta.value):null,
+    imagenes:imgs, notas, destacado:eDestacado.checked, activo:eActivo.checked
+  };
+  let error;
+  if(editId){ ({error}=await sb.from('perfumes').update(payload).eq('id',editId)); }
+  else{ ({error}=await sb.from('perfumes').insert(payload)); }
+  btn.classList.remove('uploading'); btn.textContent='Guardar perfume';
+  if(error){toast('Error al guardar');return;}
+  toast(editId?'Perfume actualizado ✓':'Perfume creado ✓');
+  cerrarEditor(); cargar();
+}
+async function eliminar(id){
+  const p=PERFUMES.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar "${p?.nombre}"? Esta acción no se puede deshacer.`))return;
+  const {error}=await sb.from('perfumes').delete().eq('id',id);
+  toast(error?'Error al eliminar':'Perfume eliminado ✓');
+  if(!error) cargar();
+}
+
+/* Util */
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')cerrarEditor();});
+</script>
+</body>
+</html>

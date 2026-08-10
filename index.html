@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aroma Élite Perfumes · Catálogo</title>
+<meta name="description" content="Aroma Élite Perfumes — perfumes árabes, de diseñador y de nicho. Elegancia embotellada." />
+
+<!-- ============ CONFIGURA AQUÍ TU SUPABASE ============ -->
+<script>
+  const SUPABASE_URL  = "https://bhatreoyfwyszmsmtuuz.supabase.co";   // ← pega tu Project URL
+  const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoYXRyZW95Znd5c3ptc210dXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMjQzNjYsImV4cCI6MjEwMTkwMDM2Nn0.CR-Z95iqein16qsfqjCdtfaUUm-f3Qdgi2Jumf-wY7M";                        // ← pega tu anon key
+</script>
+<!-- ==================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --negro:#0b0b0c; --negro-2:#111113; --negro-3:#1a1a1d;
+  --blanco:#f6f4f0; --gris:#9a968e; --gris-2:#6c6963;
+  --oro:#c6a664; --oro-claro:#e6d4a6;
+  --linea:rgba(246,244,240,.09);
+  --display:'Cormorant Garamond',serif;
+  --sans:'Jost',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--negro);color:var(--blanco);font-family:var(--sans);font-weight:300;line-height:1.6;overflow-x:hidden}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--oro);color:#000}
+
+/* ---------- LOADER ---------- */
+#loader{position:fixed;inset:0;z-index:9999;background:var(--blanco);
+  display:flex;align-items:center;justify-content:center;transition:opacity .7s ease,visibility .7s}
+#loader.hide{opacity:0;visibility:hidden}
+#loader img{width:230px;mix-blend-mode:multiply;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(.98)}50%{opacity:1;transform:scale(1)}}
+
+/* ---------- HEADER ---------- */
+header{position:sticky;top:0;z-index:100;background:rgba(11,11,12,.82);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--linea)}
+.nav{max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{height:52px;mix-blend-mode:screen}
+.socials{display:flex;gap:10px}
+.socials a{width:38px;height:38px;border:1px solid var(--linea);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--gris);transition:.3s}
+.socials a:hover{border-color:var(--oro);color:var(--oro);transform:translateY(-2px)}
+.socials svg{width:17px;height:17px}
+
+/* ---------- HERO ---------- */
+.hero{position:relative;text-align:center;padding:78px 24px 60px;overflow:hidden}
+.hero::before{content:"";position:absolute;top:-40%;left:50%;transform:translateX(-50%);
+  width:680px;height:680px;background:radial-gradient(circle,rgba(198,166,100,.14),transparent 62%);pointer-events:none}
+.hero .eyebrow{font-size:12px;letter-spacing:.42em;color:var(--oro);text-transform:uppercase;margin-bottom:22px}
+.hero h1{font-family:var(--display);font-weight:500;font-size:clamp(2.6rem,7vw,4.8rem);line-height:1.05;letter-spacing:.01em}
+.hero h1 em{font-style:italic;color:var(--oro-claro)}
+.hero p{max-width:520px;margin:20px auto 0;color:var(--gris);font-size:1.02rem}
+.divider{width:54px;height:1px;background:var(--oro);margin:30px auto 0;position:relative}
+.divider::before,.divider::after{content:"";position:absolute;top:50%;width:5px;height:5px;background:var(--oro);border-radius:50%;transform:translateY(-50%)}
+.divider::before{left:-11px}.divider::after{right:-11px}
+
+/* ---------- FILTROS ---------- */
+.filtros{max-width:1280px;margin:0 auto;padding:8px 24px 4px;position:sticky;top:81px;z-index:90;
+  background:linear-gradient(var(--negro) 70%,transparent)}
+.search-wrap{position:relative;max-width:440px;margin:0 auto 22px}
+.search-wrap svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--gris-2)}
+#search{width:100%;background:var(--negro-2);border:1px solid var(--linea);color:var(--blanco);
+  padding:13px 16px 13px 44px;border-radius:40px;font-family:var(--sans);font-size:.95rem;outline:none;transition:.3s}
+#search:focus{border-color:var(--oro)}
+#search::placeholder{color:var(--gris-2)}
+.filtro-fila{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;margin-bottom:8px}
+.filtro-grupo{display:flex;flex-direction:column;align-items:center;gap:8px}
+.filtro-label{font-size:10px;letter-spacing:.28em;color:var(--gris-2);text-transform:uppercase}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{background:transparent;border:1px solid var(--linea);color:var(--gris);
+  padding:8px 18px;border-radius:40px;font-family:var(--sans);font-size:.82rem;letter-spacing:.04em;
+  cursor:pointer;transition:.25s;white-space:nowrap}
+.chip:hover{border-color:var(--gris)}
+.chip.activo{background:var(--blanco);color:#000;border-color:var(--blanco)}
+.contador{text-align:center;color:var(--gris-2);font-size:.8rem;letter-spacing:.12em;margin:18px 0 6px}
+
+/* ---------- GRID ---------- */
+.grid{max-width:1280px;margin:0 auto;padding:20px 24px 80px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:26px}
+.card{background:var(--negro-2);border:1px solid var(--linea);border-radius:16px;overflow:hidden;
+  cursor:pointer;transition:transform .35s,border-color .35s;display:flex;flex-direction:column;position:relative}
+.card:hover{transform:translateY(-6px);border-color:rgba(198,166,100,.5)}
+.card-img{position:relative;aspect-ratio:1/1;background:#0f0f10;overflow:hidden}
+.card-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.card:hover .card-img img{transform:scale(1.06)}
+.card-img .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gris-2);font-family:var(--display);font-size:2rem}
+.badge-desc{position:absolute;top:12px;left:12px;background:var(--oro);color:#000;
+  font-size:.72rem;font-weight:500;letter-spacing:.06em;padding:5px 10px;border-radius:20px}
+.badge-tag{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.62);backdrop-filter:blur(6px);
+  border:1px solid var(--linea);color:var(--blanco);font-size:.66rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:5px 10px;border-radius:20px}
+.card-body{padding:18px 18px 20px;display:flex;flex-direction:column;flex:1}
+.card-marca{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--oro);margin-bottom:5px}
+.card-nombre{font-family:var(--display);font-size:1.42rem;font-weight:500;line-height:1.2;margin-bottom:10px}
+.card-gen{font-size:.72rem;letter-spacing:.1em;color:var(--gris);text-transform:uppercase;margin-bottom:14px}
+.card-precio{margin-top:auto;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.precio-actual{font-family:var(--display);font-size:1.6rem;color:var(--blanco)}
+.precio-antes{font-size:.9rem;color:var(--gris-2);text-decoration:line-through}
+.card-cta{margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;
+  background:transparent;border:1px solid var(--linea);color:var(--blanco);
+  padding:11px;border-radius:40px;font-family:var(--sans);font-size:.82rem;letter-spacing:.1em;transition:.3s}
+.card:hover .card-cta{border-color:var(--oro);color:var(--oro)}
+
+.vacio{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--gris)}
+.vacio .display{font-family:var(--display);font-size:2rem;margin-bottom:10px}
+
+/* ---------- MODAL ---------- */
+.modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.86);backdrop-filter:blur(6px);
+  display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto}
+.modal.open{display:flex}
+.modal-card{background:var(--negro-2);border:1px solid var(--linea);border-radius:20px;
+  max-width:920px;width:100%;margin:auto;overflow:hidden;animation:up .4s ease}
+@keyframes up{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr}
+.m-gal{background:#0d0d0e;padding:26px;display:flex;flex-direction:column;gap:14px}
+.m-gal-main{aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#111;border:1px solid var(--linea)}
+.m-gal-main img{width:100%;height:100%;object-fit:cover}
+.m-gal-main .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--gris-2);font-family:var(--display);font-size:3rem}
+.m-thumbs{display:flex;gap:10px;flex-wrap:wrap}
+.m-thumb{width:60px;height:60px;border-radius:9px;overflow:hidden;border:1px solid var(--linea);cursor:pointer;opacity:.55;transition:.25s}
+.m-thumb.on,.m-thumb:hover{opacity:1;border-color:var(--oro)}
+.m-thumb img{width:100%;height:100%;object-fit:cover}
+.m-info{padding:30px 30px 26px;position:relative;overflow-y:auto;max-height:88vh}
+.m-close{position:absolute;top:18px;right:18px;width:36px;height:36px;border:1px solid var(--linea);
+  background:transparent;color:var(--blanco);border-radius:50%;cursor:pointer;font-size:1.1rem;transition:.3s}
+.m-close:hover{border-color:var(--oro);color:var(--oro);transform:rotate(90deg)}
+.m-marca{font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--oro);margin-bottom:8px}
+.m-nombre{font-family:var(--display);font-size:2.2rem;font-weight:500;line-height:1.1;margin-bottom:14px}
+.m-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+.m-tag{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);
+  border:1px solid var(--linea);padding:5px 11px;border-radius:20px}
+.m-precio{display:flex;align-items:baseline;gap:12px;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--linea)}
+.m-precio .now{font-family:var(--display);font-size:2.3rem}
+.m-precio .old{color:var(--gris-2);text-decoration:line-through;font-size:1.05rem}
+.m-precio .pct{background:var(--oro);color:#000;font-size:.74rem;font-weight:500;padding:4px 10px;border-radius:16px;letter-spacing:.04em}
+.m-desc{color:var(--gris);font-size:.96rem;margin-bottom:22px}
+.specs{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.spec{display:flex;align-items:center;gap:12px}
+.spec svg{width:17px;height:17px;color:var(--oro);flex-shrink:0}
+.spec b{font-weight:400;color:var(--gris-2);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;min-width:88px}
+.spec span{color:var(--blanco);font-size:.95rem}
+.notas-tit{font-family:var(--display);font-size:1.35rem;margin:6px 0 16px}
+.piramide{display:flex;flex-direction:column;gap:18px;margin-bottom:26px}
+.nivel-label{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--oro);margin-bottom:10px}
+.notas-row{display:flex;flex-wrap:wrap;gap:16px}
+.nota{display:flex;flex-direction:column;align-items:center;gap:7px;width:64px;text-align:center}
+.nota-img{width:58px;height:58px;border-radius:50%;overflow:hidden;border:1px solid var(--linea);background:#0f0f10}
+.nota-img img{width:100%;height:100%;object-fit:cover}
+.nota-img .ini{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--display);color:var(--oro);font-size:1.3rem}
+.nota span{font-size:.72rem;color:var(--gris);line-height:1.25}
+.m-wsp{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  background:var(--oro);color:#000;border:none;padding:16px;border-radius:40px;cursor:pointer;
+  font-family:var(--sans);font-weight:500;font-size:.95rem;letter-spacing:.06em;transition:.3s}
+.m-wsp:hover{background:var(--oro-claro);transform:translateY(-2px)}
+.m-wsp svg{width:20px;height:20px}
+
+/* ---------- FOOTER ---------- */
+footer{border-top:1px solid var(--linea);padding:56px 24px 40px;text-align:center;background:var(--negro)}
+footer img{height:74px;margin:0 auto 20px;mix-blend-mode:screen}
+.foot-socials{display:flex;gap:14px;justify-content:center;margin:22px 0 26px}
+.foot-socials a{width:42px;height:42px;border:1px solid var(--linea);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--gris);transition:.3s}
+.foot-socials a:hover{border-color:var(--oro);color:var(--oro);transform:translateY(-3px)}
+.foot-socials svg{width:18px;height:18px}
+footer .copy{color:var(--gris-2);font-size:.78rem;letter-spacing:.1em}
+
+/* ---------- WHATSAPP FLOTANTE ---------- */
+.wsp-float{position:fixed;bottom:24px;right:24px;z-index:300;width:58px;height:58px;border-radius:50%;
+  background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(37,211,102,.4);
+  transition:.3s;animation:bob 3s ease-in-out infinite}
+.wsp-float:hover{transform:scale(1.08)}
+.wsp-float svg{width:30px;height:30px;fill:#fff}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* ---------- RESPONSIVE ---------- */
+@media(max-width:720px){
+  .modal-grid{grid-template-columns:1fr}
+  .m-info{max-height:none}
+  .brand img{height:44px}
+  .hero{padding:56px 20px 44px}
+  .filtros{top:70px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER (logo blanco sobre fondo claro) -->
+<div id="loader"><img src="assets/logo-blanco.png" alt="Aroma Élite" /></div>
+
+<!-- HEADER (logo negro sobre fondo oscuro) -->
+<header>
+  <div class="nav">
+    <div class="brand">
+      <img src="assets/logo-negro.png" alt="Aroma Élite Perfumes" />
+    </div>
+    <div class="socials" id="topSocials"></div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="eyebrow">Aroma Élite Perfumes</div>
+  <h1>Elegancia <em>embotellada</em></h1>
+  <p>Perfumes árabes, de diseñador y de nicho. Fragancias seleccionadas para quienes dejan huella.</p>
+  <div class="divider"></div>
+</section>
+
+<!-- FILTROS -->
+<section class="filtros">
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="search" type="text" placeholder="Buscar por nombre o marca…" />
+  </div>
+  <div class="filtro-fila">
+    <div class="filtro-grupo">
+      <div class="filtro-label">Categoría</div>
+      <div class="chips" id="fTipo">
+        <button class="chip activo" data-v="">Todos</button>
+        <button class="chip" data-v="arabe">Árabes</button>
+        <button class="chip" data-v="diseñador">Diseñador</button>
+        <button class="chip" data-v="nicho">Nicho</button>
+      </div>
+    </div>
+    <div class="filtro-grupo">
+      <div class="filtro-label">Género</div>
+      <div class="chips" id="fGenero">
+        <button class="chip activo" data-v="">Todos</button>
+        <button class="chip" data-v="hombre">Hombre</button>
+        <button class="chip" data-v="mujer">Mujer</button>
+        <button class="chip" data-v="unisex">Unisex</button>
+      </div>
+    </div>
+  </div>
+  <div class="contador" id="contador"></div>
+</section>
+
+<!-- GRID -->
+<main class="grid" id="grid"></main>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <div class="modal-grid">
+      <div class="m-gal">
+        <div class="m-gal-main" id="mMain"></div>
+        <div class="m-thumbs" id="mThumbs"></div>
+      </div>
+      <div class="m-info" id="mInfo"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER (logo negro sobre fondo oscuro) -->
+<footer>
+  <img src="assets/logo-negro.png" alt="Aroma Élite Perfumes" />
+  <div class="foot-socials" id="footSocials"></div>
+  <div class="copy">© <span id="year"></span> Aroma Élite Perfumes · Ica, Perú</div>
+</footer>
+
+<!-- WhatsApp flotante -->
+<a class="wsp-float" id="wspFloat" target="_blank" rel="noopener">
+  <svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.2-.2.3-.7 1-.9 1.1-.2.2-.3.2-.6.1-1.6-.8-2.6-1.4-3.7-3.2-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.3 5.2 4.6 2 .8 2.7.9 3.7.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2z"/></svg>
+</a>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let PERFUMES = [], CONFIG = {}, filtroTipo="", filtroGenero="", termino="";
+
+const ICON = {
+  instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>',
+  tiktok:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 3v3.3a5 5 0 0 0 4 2.6v3.1a8 8 0 0 1-4-1.2v5.7A5.9 5.9 0 1 1 10 11v3.2A2.7 2.7 0 1 0 12.9 17V3H16z"/></svg>',
+  facebook:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2 0-3 1.3-3 3.2V11H9v3h2v7h3v-7h2.5l.5-3H14V9.4c0-.3.2-.4.5-.4z"/></svg>',
+  wsp:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.2-.2.3-.7 1-.9 1.1-.2.2-.3.2-.6.1-1.6-.8-2.6-1.4-3.7-3.2-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.3 5.2 4.6 2 .8 2.7.9 3.7.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.6-.4z"/></svg>'
+};
+
+document.getElementById('year').textContent = new Date().getFullYear();
+
+async function init(){
+  try{
+    const {data:cfg} = await sb.from('config').select('*').eq('id',1).single();
+    CONFIG = cfg || {};
+    const {data:perf} = await sb.from('perfumes').select('*')
+      .eq('activo',true).order('destacado',{ascending:false}).order('orden').order('created_at',{ascending:false});
+    PERFUMES = perf || [];
+    pintarSocials(); render();
+  }catch(e){
+    console.error(e);
+    document.getElementById('grid').innerHTML =
+      '<div class="vacio"><div class="display">Conexión pendiente</div><p>Revisa que tu URL y anon key de Supabase estén configuradas en index.html.</p></div>';
+  }finally{
+    setTimeout(()=>document.getElementById('loader').classList.add('hide'),450);
+  }
+}
+
+function wspLink(texto){
+  const num=(CONFIG.whatsapp||'').replace(/\D/g,'');
+  const full=num.startsWith('51')?num:('51'+num);
+  return `https://wa.me/${full}?text=${encodeURIComponent(texto)}`;
+}
+
+function pintarSocials(){
+  const links=[];
+  if(CONFIG.instagram) links.push(['instagram',CONFIG.instagram]);
+  if(CONFIG.tiktok)    links.push(['tiktok',CONFIG.tiktok]);
+  if(CONFIG.facebook)  links.push(['facebook',CONFIG.facebook]);
+  const html=links.map(([k,u])=>`<a href="${u}" target="_blank" rel="noopener" aria-label="${k}">${ICON[k]}</a>`).join('');
+  document.getElementById('topSocials').innerHTML=html;
+  document.getElementById('footSocials').innerHTML=html+
+    `<a href="${wspLink(CONFIG.mensaje_wsp||'Hola')}" target="_blank" rel="noopener" aria-label="WhatsApp">${ICON.wsp}</a>`;
+  document.getElementById('wspFloat').href=wspLink(CONFIG.mensaje_wsp||'Hola, quiero información de sus perfumes.');
+}
+
+const tipoLabel={arabe:'Árabe','diseñador':'Diseñador',nicho:'Nicho'};
+const money=n=>'S/ '+Number(n||0).toFixed(2);
+const pct=(p,o)=> (p&&o)? Math.round((1-o/p)*100):0;
+const primImg=arr=>Array.isArray(arr)&&arr.length?arr[0]:'';
+
+function render(){
+  const g=document.getElementById('grid');
+  const list=PERFUMES.filter(p=>{
+    if(filtroTipo && p.tipo!==filtroTipo) return false;
+    if(filtroGenero && p.genero!==filtroGenero) return false;
+    if(termino){
+      const t=termino.toLowerCase();
+      if(!((p.nombre||'').toLowerCase().includes(t)||(p.marca||'').toLowerCase().includes(t))) return false;
+    }
+    return true;
+  });
+  document.getElementById('contador').textContent =
+    list.length? `${list.length} ${list.length===1?'fragancia':'fragancias'}`:'';
+  if(!list.length){
+    g.innerHTML='<div class="vacio"><div class="display">Sin resultados</div><p>Prueba con otros filtros o términos de búsqueda.</p></div>';
+    return;
+  }
+  g.innerHTML=list.map((p,i)=>{
+    const img=primImg(p.imagenes);
+    const d=pct(p.precio,p.precio_oferta);
+    const gen=(p.genero||'').charAt(0).toUpperCase()+(p.genero||'').slice(1);
+    return `<article class="card" onclick="abrir('${p.id}')">
+      <div class="card-img">
+        ${d?`<span class="badge-desc">-${d}%</span>`:''}
+        ${p.tipo?`<span class="badge-tag">${tipoLabel[p.tipo]||p.tipo}</span>`:''}
+        ${img?`<img loading="lazy" src="${img}" alt="${p.nombre}">`:`<div class="ph">Æ</div>`}
+      </div>
+      <div class="card-body">
+        ${p.marca?`<div class="card-marca">${p.marca}</div>`:''}
+        <div class="card-nombre">${p.nombre}</div>
+        <div class="card-gen">${gen}</div>
+        <div class="card-precio">
+          <span class="precio-actual">${money(p.precio_oferta||p.precio)}</span>
+          ${p.precio_oferta?`<span class="precio-antes">${money(p.precio)}</span>`:''}
+        </div>
+        <div class="card-cta">Ver detalle</div>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function notaHTML(n){
+  const ini=(n.nombre||'?').charAt(0).toUpperCase();
+  return `<div class="nota">
+    <div class="nota-img">${n.imagen?`<img src="${n.imagen}" alt="${n.nombre}">`:`<div class="ini">${ini}</div>`}</div>
+    <span>${n.nombre||''}</span></div>`;
+}
+function nivelHTML(label,arr){
+  if(!Array.isArray(arr)||!arr.length) return '';
+  return `<div><div class="nivel-label">${label}</div><div class="notas-row">${arr.map(notaHTML).join('')}</div></div>`;
+}
+
+function abrir(id){
+  const p=PERFUMES.find(x=>x.id===id); if(!p) return;
+  const imgs=Array.isArray(p.imagenes)?p.imagenes:[];
+  const main=document.getElementById('mMain');
+  main.innerHTML = imgs.length?`<img id="mMainImg" src="${imgs[0]}" alt="${p.nombre}">`:`<div class="ph">Æ</div>`;
+  document.getElementById('mThumbs').innerHTML = imgs.length>1?imgs.map((u,i)=>
+    `<div class="m-thumb ${i===0?'on':''}" onclick="cambiarImg('${u}',this)"><img src="${u}"></div>`).join(''):'';
+
+  const d=pct(p.precio,p.precio_oferta);
+  const gen=(p.genero||'').charAt(0).toUpperCase()+(p.genero||'').slice(1);
+  const notas=p.notas||{};
+  const piramide = [nivelHTML('Notas de salida',notas.salida),nivelHTML('Notas de corazón',notas.corazon),nivelHTML('Notas de fondo',notas.fondo)].join('');
+  const specs=[];
+  if(p.duracion) specs.push(['clock',`<b>Duración</b><span>${p.duracion}</span>`]);
+  if(p.hora_uso) specs.push(['sun',`<b>Uso ideal</b><span>${p.hora_uso}</span>`]);
+  if(p.marca)    specs.push(['tag',`<b>Marca</b><span>${p.marca}</span>`]);
+  const svgs={clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>',tag:'<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/>'};
+  const specHTML=specs.map(([ic,txt])=>`<div class="spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${svgs[ic]}</svg>${txt}</div>`).join('');
+
+  const pedido=`${CONFIG.mensaje_wsp||'Hola, me interesa este perfume:'} *${p.nombre}*${p.marca?` (${p.marca})`:''} — ${money(p.precio_oferta||p.precio)}`;
+
+  document.getElementById('mInfo').innerHTML=`
+    <button class="m-close" onclick="cerrar()">✕</button>
+    ${p.marca?`<div class="m-marca">${p.marca}</div>`:''}
+    <div class="m-nombre">${p.nombre}</div>
+    <div class="m-tags">
+      ${p.tipo?`<span class="m-tag">${tipoLabel[p.tipo]||p.tipo}</span>`:''}
+      ${p.genero?`<span class="m-tag">${gen}</span>`:''}
+    </div>
+    <div class="m-precio">
+      <span class="now">${money(p.precio_oferta||p.precio)}</span>
+      ${p.precio_oferta?`<span class="old">${money(p.precio)}</span><span class="pct">-${d}%</span>`:''}
+    </div>
+    ${p.descripcion?`<p class="m-desc">${p.descripcion}</p>`:''}
+    ${specHTML?`<div class="specs">${specHTML}</div>`:''}
+    ${piramide?`<div class="notas-tit">Pirámide olfativa</div><div class="piramide">${piramide}</div>`:''}
+    <a class="m-wsp" href="${wspLink(pedido)}" target="_blank" rel="noopener">
+      ${ICON.wsp} Pedir por WhatsApp
+    </a>`;
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function cambiarImg(u,el){
+  const img=document.getElementById('mMainImg'); if(img) img.src=u;
+  document.querySelectorAll('.m-thumb').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+}
+function cerrar(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')cerrar();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar();});
+
+// Filtros
+document.getElementById('fTipo').addEventListener('click',e=>{
+  if(!e.target.classList.contains('chip'))return;
+  document.querySelectorAll('#fTipo .chip').forEach(c=>c.classList.remove('activo'));
+  e.target.classList.add('activo'); filtroTipo=e.target.dataset.v; render();
+});
+document.getElementById('fGenero').addEventListener('click',e=>{
+  if(!e.target.classList.contains('chip'))return;
+  document.querySelectorAll('#fGenero .chip').forEach(c=>c.classList.remove('activo'));
+  e.target.classList.add('activo'); filtroGenero=e.target.dataset.v; render();
+});
+let deb; document.getElementById('search').addEventListener('input',e=>{
+  clearTimeout(deb); deb=setTimeout(()=>{termino=e.target.value.trim(); render();},180);
+});
+
+init();
+</script>
+</body>
+</html>
