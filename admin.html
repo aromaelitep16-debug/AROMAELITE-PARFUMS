@@ -110,6 +110,7 @@ img{display:block;max-width:100%}
       <button class="tab active" data-tab="productos">Productos</button>
       <button class="tab" data-tab="notas">Notas</button>
       <button class="tab" data-tab="promos">Promociones</button>
+      <button class="tab" data-tab="ventas">Ventas</button>
     </div>
     <button class="btn danger" id="logout">Salir</button>
   </div>
@@ -128,6 +129,11 @@ img{display:block;max-width:100%}
     <div class="bar"><button class="btn" id="newPromo">+ Nueva promoción</button></div>
     <div class="list" id="listPromos"></div>
   </section>
+
+  <section id="tab-ventas" style="display:none">
+    <div class="bar"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.4rem">Registro de ventas</h3></div>
+    <div class="list" id="listVentas"></div>
+  </section>
 </div>
 
 <div class="ov" id="ov"><div class="modal" id="modal"></div></div>
@@ -143,7 +149,7 @@ const MLS = ['3','5','10','30','Sellado'];
 $('#loginStore').textContent = CONFIG.TIENDA_NOMBRE;
 $('#storeTitle').textContent = CONFIG.TIENDA_NOMBRE;
 
-let PRODUCTOS=[], NOTAS=[], REL=[], PROMOS=[];
+let PRODUCTOS=[], NOTAS=[], REL=[], PROMOS=[], VENTAS=[];
 
 /* ============ Auth ============ */
 async function checkSession(){
@@ -167,10 +173,11 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   $('#tab-productos').style.display = t.dataset.tab==='productos'?'block':'none';
   $('#tab-notas').style.display    = t.dataset.tab==='notas'?'block':'none';
   $('#tab-promos').style.display   = t.dataset.tab==='promos'?'block':'none';
+  $('#tab-ventas').style.display   = t.dataset.tab==='ventas'?'block':'none';
 });
 
 /* ============ Carga ============ */
-async function boot(){ await Promise.all([loadNotas(), loadProductos(), loadPromos()]); }
+async function boot(){ await Promise.all([loadNotas(), loadProductos(), loadPromos(), loadVentas()]); }
 async function loadNotas(){ const {data}=await sb.from('notas').select('*').order('nombre'); NOTAS=data||[]; renderNotas(); }
 async function loadPromos(){ const {data}=await sb.from('promociones').select('*').order('created_at',{ascending:false}); PROMOS=data||[]; renderPromos(); }
 async function loadProductos(){
@@ -200,7 +207,7 @@ function renderProductos(){
       <div class="th">${img?`<img src="${esc(img)}">`:esc((p.marca||p.nombre||'?')[0])}</div>
       <div class="info">
         <div class="n">${esc(p.nombre)} ${p.destacado?'<span class="tg">Destacado</span>':''} ${p.visible===false?'<span class="tg off">Oculto</span>':''}</div>
-        <div class="sub">${esc(p.marca||'')} · ${esc(p.categoria||'')} · ${esc(p.genero||'')} · ${pres.length} presentación${pres.length!==1?'es':''}</div>
+        <div class="sub">${esc(p.marca||'')} · ${esc(p.categoria||'')} · ${esc(p.genero||'')} · ${pres.length} presentación${pres.length!==1?'es':''}${p.stock!=null?` · Stock: ${p.stock}`:''}</div>
       </div>
       <div class="acts">
         <button class="iconbtn" data-edit="${p.id}">✏️</button>
@@ -232,6 +239,8 @@ function prodForm(id){
       <div class="field"><label>Orden</label><input id="pOrden" type="number" value="${p.orden??0}"></div>
     </div>
     <div class="field"><label>Descripción corta</label><input id="pDesc" value="${esc(p.descripcion||'')}" placeholder="Ej. Fresco, amaderado, elegante"></div>
+
+    <div class="field"><label>Stock (unidades)</label><input id="pStock" type="number" min="0" value="${p.stock??''}" placeholder="Vacío = sin límite"><div class="hint">Vacío = no controlar stock · 0 = agotado · N = unidades disponibles. Se muestra en el catálogo.</div></div>
 
     <div class="field"><label>Imágenes</label>
       <input id="pFiles" type="file" accept="image/*" multiple>
@@ -310,6 +319,7 @@ function prodForm(id){
     const payload = {
       marca:$('#pMarca').value.trim(), nombre, categoria:$('#pCat').value, genero:$('#pGen').value,
       orden:parseInt($('#pOrden').value)||0, descripcion:$('#pDesc').value.trim(),
+      stock: $('#pStock').value.trim()===''? null : (parseInt($('#pStock').value)||0),
       imagenes:imgs, imagen_url:imgs[0]||null, presentaciones:presLimpio,
       notas_salida:$('#pSalida').value.trim()||null, notas_corazon:$('#pCorazon').value.trim()||null, notas_fondo:$('#pFondo').value.trim()||null,
       longevidad:$('#pLong').value.trim()||null, estela:$('#pEstela').value.trim()||null, ocasion:$('#pOcasion').value.trim()||null,
@@ -484,6 +494,89 @@ function promoForm(id){
   openOv();
 }
 async function delPromo(id){ if(!confirm('¿Eliminar esta promoción?'))return; const {error}=await sb.from('promociones').delete().eq('id',id); if(error){toast('Error: '+error.message,true);return;} toast('Eliminada'); loadPromos(); }
+
+/* ============ VENTAS ============ */
+const VENTA_ESTADOS = ['nuevo','confirmado','entregado','cancelado'];
+function fmtV(n){ return (CONFIG.MONEDA||'S/')+' '+Number(n||0).toFixed(2); }
+function fechaCorta(iso){ try{ return new Date(iso).toLocaleString('es-PE',{dateStyle:'medium',timeStyle:'short'}); }catch(e){ return iso||''; } }
+function estSel(cur,e){ return (cur||'nuevo')===e?'selected':''; }
+
+async function loadVentas(){
+  const {data,error}=await sb.from('ventas').select('*').order('created_at',{ascending:false});
+  VENTAS = error ? [] : (data||[]);
+  renderVentas();
+}
+function renderVentas(){
+  if(!VENTAS.length){ $('#listVentas').innerHTML='<div class="hint">Aún no hay ventas registradas. Cuando un cliente haga un pedido y deje sus datos, aparecerá aquí.</div>'; return; }
+  $('#listVentas').innerHTML = VENTAS.map(v=>{
+    const it=v.items||[]; const n=it.reduce((s,x)=>s+(+x.qty||0),0);
+    const est=v.estado||'nuevo';
+    return `<div class="item">
+      <div class="th">🧾</div>
+      <div class="info">
+        <div class="n">${esc(v.cliente_nombre||'Sin nombre')} <span class="tg ${est==='cancelado'?'off':''}">${esc(est)}</span></div>
+        <div class="sub">${esc(fechaCorta(v.created_at))} · ${n} art. · ${fmtV(v.total)}${v.cliente_telefono?` · ${esc(v.cliente_telefono)}`:''}</div>
+      </div>
+      <div class="acts">
+        <button class="iconbtn" data-edit="${v.id}">✏️</button>
+        <button class="iconbtn" data-del="${v.id}">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+  $('#listVentas').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>ventaForm(b.dataset.edit));
+  $('#listVentas').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delVenta(b.dataset.del));
+}
+function ventaForm(id){
+  const v=VENTAS.find(x=>x.id===id); if(!v) return;
+  const it=v.items||[];
+  const itemsHtml = it.length ? it.map(x=>`<div class="pres-row" style="grid-template-columns:1fr auto auto">
+      <div>${esc(x.nombre||'')}${x.marca?` <span style="color:var(--muted)">· ${esc(x.marca)}</span>`:''} <span style="color:var(--gold-3)">(${esc(String(x.ml))})</span></div>
+      <div style="color:var(--muted)">x${esc(String(x.qty))}</div>
+      <div>${fmtV(x.total!=null?x.total:(Number(x.precio)*Number(x.qty)))}</div>
+    </div>`).join('') : '<div class="hint">Sin detalle de artículos.</div>';
+
+  $('#modal').innerHTML = `
+    <h3>Editar venta</h3>
+    <div class="hint">Registrada: ${esc(fechaCorta(v.created_at))} · Pago: ${esc(v.metodo_pago||'—')}${v.yape_operacion?` · Op. Yape: ${esc(v.yape_operacion)}`:''}</div>
+    <div class="grid2">
+      <div class="field"><label>Nombre del cliente</label><input id="vNombre" value="${esc(v.cliente_nombre||'')}"></div>
+      <div class="field"><label>Teléfono</label><input id="vTel" value="${esc(v.cliente_telefono||'')}"></div>
+    </div>
+    <div class="field"><label>Dirección / referencia</label><input id="vDir" value="${esc(v.cliente_direccion||'')}"></div>
+    <div class="field"><label>Nota del cliente</label><input id="vNota" value="${esc(v.cliente_nota||'')}"></div>
+
+    <div class="field"><label>Artículos del pedido</label><div id="ventaItems">${itemsHtml}</div></div>
+
+    <div class="grid3">
+      <div class="field"><label>Subtotal</label><input id="vSub" type="number" step="0.01" value="${v.subtotal??''}"></div>
+      <div class="field"><label>Descuento</label><input id="vDescu" type="number" step="0.01" value="${v.descuento??''}"></div>
+      <div class="field"><label>Total</label><input id="vTotal" type="number" step="0.01" value="${v.total??''}"></div>
+    </div>
+    <div class="field"><label>Estado</label><select id="vEstado">${VENTA_ESTADOS.map(e=>`<option ${estSel(v.estado,e)}>${e}</option>`).join('')}</select></div>
+    <div class="field"><label>Notas internas (solo tú las ves)</label><textarea id="vInternas" rows="2">${esc(v.notas_internas||'')}</textarea></div>
+
+    <div class="actions">
+      <button class="btn" id="saveVenta">Guardar cambios</button>
+      <button class="btn ghost" id="cancelVenta">Cancelar</button>
+    </div>`;
+  $('#cancelVenta').onclick=closeOv;
+  $('#saveVenta').onclick=async()=>{
+    const num=el=>el.value===''?null:Number(el.value);
+    const payload={
+      cliente_nombre:$('#vNombre').value.trim()||null,
+      cliente_telefono:$('#vTel').value.trim()||null,
+      cliente_direccion:$('#vDir').value.trim()||null,
+      cliente_nota:$('#vNota').value.trim()||null,
+      subtotal:num($('#vSub')), descuento:num($('#vDescu')), total:num($('#vTotal')),
+      estado:$('#vEstado').value, notas_internas:$('#vInternas').value.trim()||null,
+    };
+    const {error}=await sb.from('ventas').update(payload).eq('id',id);
+    if(error){ toast('Error: '+error.message,true); return; }
+    toast('Venta actualizada ✓'); closeOv(); loadVentas();
+  };
+  openOv();
+}
+async function delVenta(id){ if(!confirm('¿Eliminar esta venta del registro?'))return; const {error}=await sb.from('ventas').delete().eq('id',id); if(error){toast('Error: '+error.message,true);return;} toast('Venta eliminada'); loadVentas(); }
 
 /* ============ Overlay + acciones ============ */
 function openOv(){ $('#ov').classList.add('open'); document.body.style.overflow='hidden'; }
