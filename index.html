@@ -255,6 +255,7 @@ const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;',
 $('#brand').innerHTML = CONFIG.LOGO_URL ? `<img src="${CONFIG.LOGO_URL}" alt="${esc(CONFIG.TIENDA_NOMBRE)}">` : `<span class="word gold-text">${esc(CONFIG.TIENDA_NOMBRE)}</span>`;
 $('#tagline').textContent = CONFIG.TIENDA_TAGLINE || '';
 $('#heroTitle').textContent = CONFIG.TIENDA_NOMBRE;
+if(CONFIG.HERO_SUB) $('#heroSub').textContent = CONFIG.HERO_SUB;
 document.title = CONFIG.TIENDA_NOMBRE + ' — Catálogo';
 
 /* Redes sociales */

@@ -15,9 +15,12 @@ const CONFIG = {
   BUCKET: "catalogo",
 
   // --- Datos de la tienda ---
-  TIENDA_NOMBRE:  "Aroma Élite",
+  TIENDA_NOMBRE:  "Aroma Élite Perfumes",
   TIENDA_TAGLINE: "Perfumería árabe, de diseñador y de nicho",
   MONEDA:         "S/",
+
+  // --- Frase debajo del nombre grande (subtítulo de bienvenida) ---
+  HERO_SUB: "Decants y fragancias seleccionadas 100% original, pide por WhatsApp.",
 
   // --- WhatsApp para recibir pedidos (con código de país 51, sin +) ---
   WHATSAPP: "51978345068",
