@@ -23,8 +23,8 @@ const CONFIG = {
   WHATSAPP: "51978345068",
 
   // --- Pago Yape (déjalo en "" si no lo usas por ahora) ---
-  YAPE_NUMERO: "902216717",
-  YAPE_NOMBRE: "Jefferson Moron",
+  YAPE_NUMERO: "",
+  YAPE_NOMBRE: "",
 
   // --- Texto de envío que se muestra en el producto ---
   ENVIO_TEXTO: "Envíos a todo el Perú · coordina el costo por WhatsApp",
