@@ -111,6 +111,7 @@ img{display:block;max-width:100%}
       <button class="tab" data-tab="notas">Notas</button>
       <button class="tab" data-tab="promos">Promociones</button>
       <button class="tab" data-tab="ventas">Ventas</button>
+      <button class="tab" data-tab="ajustes">Ajustes</button>
     </div>
     <button class="btn danger" id="logout">Salir</button>
   </div>
@@ -134,6 +135,13 @@ img{display:block;max-width:100%}
     <div class="bar"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.4rem">Registro de ventas</h3></div>
     <div class="list" id="listVentas"></div>
   </section>
+
+  <section id="tab-ajustes" style="display:none">
+    <div class="bar"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.4rem">Ajustes del catálogo</h3></div>
+    <div class="field"><label>Frase de bienvenida (debajo del nombre)</label><textarea id="aHero" rows="2" placeholder="Ej. Decants y fragancias seleccionadas..."></textarea><div class="hint">Aparece en la portada del catálogo, debajo del nombre grande.</div></div>
+    <div class="field"><label>Mensaje de agradecimiento (comprobante impreso)</label><textarea id="aGracias" rows="2" placeholder="Ej. ¡Gracias por tu compra!"></textarea><div class="hint">Se imprime al final del comprobante de venta.</div></div>
+    <div class="actions"><button class="btn" id="saveAjustes">Guardar ajustes</button></div>
+  </section>
 </div>
 
 <div class="ov" id="ov"><div class="modal" id="modal"></div></div>
@@ -149,7 +157,7 @@ const MLS = ['3','5','10','30','Sellado'];
 $('#loginStore').textContent = CONFIG.TIENDA_NOMBRE;
 $('#storeTitle').textContent = CONFIG.TIENDA_NOMBRE;
 
-let PRODUCTOS=[], NOTAS=[], REL=[], PROMOS=[], VENTAS=[];
+let PRODUCTOS=[], NOTAS=[], REL=[], PROMOS=[], VENTAS=[], AJUSTES={};
 
 /* ============ Auth ============ */
 async function checkSession(){
@@ -174,10 +182,28 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   $('#tab-notas').style.display    = t.dataset.tab==='notas'?'block':'none';
   $('#tab-promos').style.display   = t.dataset.tab==='promos'?'block':'none';
   $('#tab-ventas').style.display   = t.dataset.tab==='ventas'?'block':'none';
+  $('#tab-ajustes').style.display  = t.dataset.tab==='ajustes'?'block':'none';
 });
 
 /* ============ Carga ============ */
-async function boot(){ await Promise.all([loadNotas(), loadProductos(), loadPromos(), loadVentas()]); }
+async function boot(){ await Promise.all([loadNotas(), loadProductos(), loadPromos(), loadVentas(), loadAjustes()]); }
+
+async function loadAjustes(){
+  const {data}=await sb.from('ajustes').select('*').eq('id','principal').maybeSingle();
+  AJUSTES = data || {};
+  renderAjustes();
+}
+function renderAjustes(){
+  const h=$('#aHero'), g=$('#aGracias');
+  if(h) h.value = (AJUSTES&&AJUSTES.hero_sub) || CONFIG.HERO_SUB || '';
+  if(g) g.value = (AJUSTES&&AJUSTES.mensaje_gracias) || CONFIG.MENSAJE_GRACIAS || '';
+}
+async function saveAjustes(){
+  const payload={ id:'principal', hero_sub:$('#aHero').value.trim()||null, mensaje_gracias:$('#aGracias').value.trim()||null };
+  const {error}=await sb.from('ajustes').upsert(payload);
+  if(error){ toast('Error: '+error.message,true); return; }
+  AJUSTES=payload; toast('Ajustes guardados ✓');
+}
 async function loadNotas(){ const {data}=await sb.from('notas').select('*').order('nombre'); NOTAS=data||[]; renderNotas(); }
 async function loadPromos(){ const {data}=await sb.from('promociones').select('*').order('created_at',{ascending:false}); PROMOS=data||[]; renderPromos(); }
 async function loadProductos(){
@@ -310,6 +336,24 @@ function prodForm(id){
     const nid=b.dataset.nota; if(selNotas.has(nid))selNotas.delete(nid); else selNotas.add(nid);
     b.classList.toggle('sel');
   });
+
+  // Auto-seleccionar notas de la biblioteca según lo escrito en salida/corazón/fondo
+  function normNota(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+  function autoSelectNotas(){
+    const txt=[$('#pSalida').value,$('#pCorazon').value,$('#pFondo').value].join(',');
+    const tokens=txt.split(/[,;/·|\n]+/).map(normNota).filter(Boolean);
+    NOTAS.forEach(n=>{
+      const nn=normNota(n.nombre); if(nn.length<2) return;
+      const hit=tokens.some(t=> t===nn || (nn.length>=3 && t.includes(nn)) );
+      if(hit && !selNotas.has(n.id)){
+        selNotas.add(n.id);
+        const btn=$('#notasPick').querySelector(`[data-nota="${n.id}"]`);
+        if(btn) btn.classList.add('sel');
+      }
+    });
+  }
+  ['#pSalida','#pCorazon','#pFondo'].forEach(sel=>{ const el=$(sel); if(el) el.addEventListener('input', autoSelectNotas); });
+  autoSelectNotas();
 
   $('#cancelProd').onclick = closeOv;
   $('#saveProd').onclick = async () => {
@@ -518,11 +562,13 @@ function renderVentas(){
         <div class="sub">${esc(fechaCorta(v.created_at))} · ${n} art. · ${fmtV(v.total)}${v.cliente_telefono?` · ${esc(v.cliente_telefono)}`:''}</div>
       </div>
       <div class="acts">
+        <button class="iconbtn" data-print="${v.id}">🖨️</button>
         <button class="iconbtn" data-edit="${v.id}">✏️</button>
         <button class="iconbtn" data-del="${v.id}">🗑️</button>
       </div>
     </div>`;
   }).join('');
+  $('#listVentas').querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>imprimirVenta(b.dataset.print));
   $('#listVentas').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>ventaForm(b.dataset.edit));
   $('#listVentas').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delVenta(b.dataset.del));
 }
@@ -552,29 +598,111 @@ function ventaForm(id){
       <div class="field"><label>Descuento</label><input id="vDescu" type="number" step="0.01" value="${v.descuento??''}"></div>
       <div class="field"><label>Total</label><input id="vTotal" type="number" step="0.01" value="${v.total??''}"></div>
     </div>
-    <div class="field"><label>Estado</label><select id="vEstado">${VENTA_ESTADOS.map(e=>`<option ${estSel(v.estado,e)}>${e}</option>`).join('')}</select></div>
+    <div class="field"><label>Estado</label><select id="vEstado">${VENTA_ESTADOS.map(e=>`<option ${estSel(v.estado,e)}>${e}</option>`).join('')}</select><div class="hint">Al marcar <b>confirmado</b> o <b>entregado</b> se descuenta el stock. Si la pasas a <b>cancelado/nuevo</b>, el stock se devuelve.${v.stock_descontado?' <span style="color:var(--ok)">· stock ya descontado</span>':''}</div></div>
     <div class="field"><label>Notas internas (solo tú las ves)</label><textarea id="vInternas" rows="2">${esc(v.notas_internas||'')}</textarea></div>
 
     <div class="actions">
       <button class="btn" id="saveVenta">Guardar cambios</button>
+      <button class="btn ghost" id="printVenta">🖨️ Imprimir</button>
       <button class="btn ghost" id="cancelVenta">Cancelar</button>
     </div>`;
   $('#cancelVenta').onclick=closeOv;
+  $('#printVenta').onclick=()=>imprimirVenta(id);
   $('#saveVenta').onclick=async()=>{
     const num=el=>el.value===''?null:Number(el.value);
+    const nuevoEstado=$('#vEstado').value;
+    const DEDUCT=['confirmado','entregado'];
+    let stockDesc=!!v.stock_descontado, extra='';
+    try{
+      if(DEDUCT.includes(nuevoEstado) && !stockDesc){ await ajustarStockDeVenta(v.items,-1); stockDesc=true; extra=' · stock descontado'; }
+      else if(!DEDUCT.includes(nuevoEstado) && stockDesc){ await ajustarStockDeVenta(v.items,+1); stockDesc=false; extra=' · stock devuelto'; }
+    }catch(e){ console.warn('stock', e); }
     const payload={
       cliente_nombre:$('#vNombre').value.trim()||null,
       cliente_telefono:$('#vTel').value.trim()||null,
       cliente_direccion:$('#vDir').value.trim()||null,
       cliente_nota:$('#vNota').value.trim()||null,
       subtotal:num($('#vSub')), descuento:num($('#vDescu')), total:num($('#vTotal')),
-      estado:$('#vEstado').value, notas_internas:$('#vInternas').value.trim()||null,
+      estado:nuevoEstado, notas_internas:$('#vInternas').value.trim()||null,
+      stock_descontado:stockDesc,
     };
     const {error}=await sb.from('ventas').update(payload).eq('id',id);
     if(error){ toast('Error: '+error.message,true); return; }
-    toast('Venta actualizada ✓'); closeOv(); loadVentas();
+    toast('Venta actualizada ✓'+extra); closeOv(); loadVentas(); loadProductos();
   };
   openOv();
+}
+
+// Ajusta el stock de los productos de una venta. sign=-1 descuenta, +1 devuelve.
+async function ajustarStockDeVenta(items, sign){
+  const map={};
+  (items||[]).forEach(it=>{ const pid=it.id||it.producto_id; if(pid) map[pid]=(map[pid]||0)+(Number(it.qty)||0); });
+  const ids=Object.keys(map); if(!ids.length) return;
+  const {data}=await sb.from('productos').select('id,stock').in('id',ids);
+  for(const p of (data||[])){
+    if(p.stock===null||p.stock===undefined) continue;   // producto sin control de stock
+    let nuevo=Number(p.stock)+sign*map[p.id];
+    if(nuevo<0) nuevo=0;
+    await sb.from('productos').update({stock:nuevo}).eq('id',p.id);
+  }
+}
+
+// Comprobante imprimible con logo, datos del cliente, artículos y agradecimiento
+function imprimirVenta(id){
+  const v=VENTAS.find(x=>x.id===id); if(!v) return;
+  const logo = CONFIG.LOGO_CARGA || CONFIG.LOGO_URL || '';
+  const gracias = (AJUSTES&&AJUSTES.mensaje_gracias) || CONFIG.MENSAJE_GRACIAS || '¡Gracias por tu compra!';
+  const it=v.items||[];
+  const filas = it.map(x=>`<tr>
+      <td>${esc(x.nombre||'')}${x.marca?`<br><span class="mrc">${esc(x.marca)}</span>`:''}</td>
+      <td class="c">${esc(mlLabel(x.ml))}</td>
+      <td class="c">${esc(String(x.qty))}</td>
+      <td class="r">${fmtV(x.total!=null?x.total:(Number(x.precio)*Number(x.qty)))}</td>
+    </tr>`).join('');
+  const datos = [
+     v.cliente_nombre?`<div><b>Cliente:</b> ${esc(v.cliente_nombre)}</div>`:'',
+     v.cliente_telefono?`<div><b>Teléfono:</b> ${esc(v.cliente_telefono)}</div>`:'',
+     v.cliente_direccion?`<div><b>Dirección:</b> ${esc(v.cliente_direccion)}</div>`:'',
+  ].join('');
+  const w=window.open('','_blank','width=430,height=700');
+  if(!w){ toast('Permite las ventanas emergentes para imprimir',true); return; }
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Venta ${esc(v.cliente_nombre||'')}</title>
+  <style>
+    *{box-sizing:border-box;font-family:Georgia,'Times New Roman',serif;margin:0;padding:0}
+    body{padding:24px;color:#1a1a1a;max-width:420px;margin:0 auto}
+    .logo{display:block;max-width:190px;max-height:120px;margin:0 auto 6px;object-fit:contain}
+    .tienda{text-align:center;font-size:20px;letter-spacing:.05em;margin-bottom:2px}
+    .subt{text-align:center;color:#777;font-size:12px;margin-bottom:14px}
+    .meta{font-size:12px;color:#555;border-top:1px dashed #bbb;border-bottom:1px dashed #bbb;padding:8px 0;margin-bottom:10px;text-align:center}
+    .datos{font-size:13px;margin-bottom:12px;line-height:1.55}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}
+    th{text-align:left;border-bottom:1px solid #333;padding:5px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+    td{padding:6px 4px;border-bottom:1px solid #eee;vertical-align:top}
+    td.c,th.c{text-align:center} td.r,th.r{text-align:right}
+    .mrc{color:#999;font-size:11px}
+    .tot{margin-top:6px;font-size:13px}
+    .tot .row{display:flex;justify-content:space-between;padding:2px 0}
+    .tot .big{font-size:17px;font-weight:bold;border-top:1px solid #333;margin-top:4px;padding-top:6px}
+    .gracias{text-align:center;margin-top:22px;font-size:15px;font-style:italic;color:#333}
+    .pie{text-align:center;margin-top:8px;font-size:11px;color:#999}
+    @media print{ body{padding:0} .noprint{display:none} }
+  </style></head><body>
+    ${logo?`<img class="logo" src="${logo}">`:''}
+    <div class="tienda">${esc(CONFIG.TIENDA_NOMBRE||'')}</div>
+    <div class="subt">${esc(CONFIG.TIENDA_TAGLINE||'')}</div>
+    <div class="meta">Comprobante de venta · ${esc(fechaCorta(v.created_at))}${v.metodo_pago?` · Pago: ${esc(v.metodo_pago)}`:''}</div>
+    ${datos?`<div class="datos">${datos}</div>`:''}
+    <table><thead><tr><th>Perfume</th><th class="c">Talla</th><th class="c">Cant.</th><th class="r">Precio</th></tr></thead><tbody>${filas}</tbody></table>
+    <div class="tot">
+      ${(v.subtotal!=null&&Number(v.descuento)>0)?`<div class="row"><span>Subtotal</span><span>${fmtV(v.subtotal)}</span></div>`:''}
+      ${Number(v.descuento)>0?`<div class="row"><span>Descuento</span><span>- ${fmtV(v.descuento)}</span></div>`:''}
+      <div class="row big"><span>Total</span><span>${fmtV(v.total)}</span></div>
+    </div>
+    <div class="gracias">${esc(gracias)}</div>
+    <div class="pie">${CONFIG.WHATSAPP?('WhatsApp: '+esc(CONFIG.WHATSAPP)):''}</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
+  </body></html>`);
+  w.document.close();
 }
 async function delVenta(id){ if(!confirm('¿Eliminar esta venta del registro?'))return; const {error}=await sb.from('ventas').delete().eq('id',id); if(error){toast('Error: '+error.message,true);return;} toast('Venta eliminada'); loadVentas(); }
 
@@ -584,6 +712,7 @@ function closeOv(){ $('#ov').classList.remove('open'); document.body.style.overf
 $('#newProd').onclick=()=>prodForm(null);
 $('#newNota').onclick=()=>notaForm(null);
 $('#newPromo').onclick=()=>promoForm(null);
+if($('#saveAjustes')) $('#saveAjustes').onclick=saveAjustes;
 
 let tt; function toast(m,bad){ const t=$('#toast'); t.textContent=m; t.className='toast show'+(bad?' bad':''); clearTimeout(tt); tt=setTimeout(()=>t.className='toast',2600); }
 

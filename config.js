@@ -20,7 +20,12 @@ const CONFIG = {
   MONEDA:         "S/",
 
   // --- Frase debajo del nombre grande (subtítulo de bienvenida) ---
-  HERO_SUB: "Decants y fragancias seleccionadas 100% original, pide por WhatsApp.",
+  //  (También editable desde el panel, en la pestaña "Ajustes")
+  HERO_SUB: "Decants y fragancias seleccionadas origen, pide por WhatsApp.",
+
+  // --- Mensaje de agradecimiento del comprobante impreso ---
+  //  (También editable desde el panel, en la pestaña "Ajustes")
+  MENSAJE_GRACIAS: "¡Gracias por tu compra! Vuelve pronto 🌸",
 
   // --- WhatsApp para recibir pedidos (con código de país 51, sin +) ---
   WHATSAPP: "51978345068",

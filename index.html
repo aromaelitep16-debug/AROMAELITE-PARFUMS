@@ -320,6 +320,9 @@ async function load(){
   const rp = await sb.from('promociones').select('*');
   PROMOS = rp.error ? [] : (rp.data||[]);
 
+  const ra = await sb.from('ajustes').select('*').eq('id','principal').maybeSingle();
+  if(!ra.error && ra.data && ra.data.hero_sub) $('#heroSub').textContent = ra.data.hero_sub;
+
   renderFilters(); render();
 }
 
@@ -531,7 +534,7 @@ async function checkout(R){
 
   // Registrar la venta (no bloquea el pedido si falla)
   try{
-    const items = R.lines.map(i => ({ nombre:i.nombre, marca:i.marca||'', ml:i.ml, qty:i.qty, precio:i.unit, total:i.lineTotal }));
+    const items = R.lines.map(i => ({ id:i.id, nombre:i.nombre, marca:i.marca||'', ml:i.ml, qty:i.qty, precio:i.unit, total:i.lineTotal }));
     await sb.from('ventas').insert({
       cliente_nombre:nombre||null, cliente_telefono:tel||null, cliente_direccion:dir||null,
       items, subtotal:R.totalSinDesc, descuento:R.ahorro, total:R.total,
